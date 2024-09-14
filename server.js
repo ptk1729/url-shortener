@@ -11,7 +11,7 @@ const bcrypt = require('bcrypt')
 const User = require('./models/User') // Ensure the correct path
 
 const app = express()
-const PORT = 80
+const APP_PORT = process.env.PORT || process.env.PORT_PROD || process.env.PORT_DEV || 3000;
 app.use(express.json())
 const authenticateToken = require('./authMiddleware');
 const MAX_URL_PER_USER = 100
@@ -23,8 +23,8 @@ async function initializeApp() {
         await sequelize.sync({ alter: true })
         console.log("Urls table created successfully!")
 
-        app.listen(PORT, () => {
-            console.log(`Server is running on http://localhost:${PORT}`)
+        app.listen(APP_PORT, () => {
+            console.log(`Server is running on http://localhost:${APP_PORT}`)
         })
     } catch (error) {
         console.error("Unable to connect to the database:", error)
