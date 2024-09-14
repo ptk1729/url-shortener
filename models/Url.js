@@ -1,7 +1,7 @@
 // models/Url.js
 const { DataTypes } = require('sequelize')
 const sequelize = require('../sequelize')
-const User = require('./user')
+const User = require('./User')
 
 const Url = sequelize.define(
     'Url',
