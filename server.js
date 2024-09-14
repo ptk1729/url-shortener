@@ -244,6 +244,9 @@ app.post('/auth/login', async (req, res) => {
     }
 });
 
+app.get('/', (req, res) => {
+    res.send('Welcome to the URL Shortener API!')
+})
 // Endpoint to fetch original URL and redirect
 app.get('/:shortUrl', async (req, res) => {
     try {
