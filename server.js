@@ -11,7 +11,10 @@ const bcrypt = require('bcrypt')
 const User = require('./models/User') // Ensure the correct path
 
 const app = express()
-const APP_PORT = process.env.PORT || process.env.PORT_PROD || process.env.PORT_DEV || 3000;
+const PORT_DEV = 80
+const PORT_PROD = 443
+const APP_PORT = PORT_PROD
+// const APP_PORT = process.env.PORT || PORT_PROD || PORT_DEV || 3000;
 app.use(express.json())
 const authenticateToken = require('./authMiddleware');
 const MAX_URL_PER_USER = 100
@@ -24,7 +27,7 @@ async function initializeApp() {
         console.log("Urls table created successfully!")
 
         app.listen(APP_PORT, () => {
-            console.log(`Server is running on http://localhost:${APP_PORT}`)
+            console.log(`Server is running on ${APP_PORT}`)
         })
     } catch (error) {
         console.error("Unable to connect to the database:", error)
