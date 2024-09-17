@@ -1,22 +1,56 @@
 const express = require("express")
 require("dotenv").config()
+const cors = require('cors')
+// Import required packages
+// require('dotenv').config()
+const crypto = require('crypto')
+const nodemailer = require('nodemailer')
 const sequelize = require("./sequelize")
 const { DataTypes } = require("sequelize")
 const shortid = require("shortid") // Add this line to use shortid for generating short URLs
 const slugify = require("slugify")
-const Url = require('./models/Url');
+const Url = require('./models/Url')
 // const express = require('express')
 const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 const User = require('./models/User') // Ensure the correct path
 
 const app = express()
+
 const PORT_DEV = 80
-const PORT_PROD = 443
-const APP_PORT = PORT_PROD
+// const PORT_PROD = 443
+const APP_PORT = 5001
+
+const otpStore = {}
+
+// Email transport for sending OTPs using environment variables
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.SUPPORT_ACCOUNT_EMAIL, // Email address from .env file
+        pass: process.env.SUPPORT_ACCOUNT_PASSWORD // Email password from .env file
+    }
+})
 // const APP_PORT = process.env.PORT || PORT_PROD || PORT_DEV || 3000;
+
+// const corsOptions = {
+//     origin: 'http://localhost:3000', // Allow requests from this origin
+//     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+//     allowedHeaders: ['Content-Type', 'Authorization', "Bearer"], // Allowed headers
+//     credentials: true // Allow cookies and authentication headers
+// }
+const corsOptions = {
+    origin: 'http://localhost:3000',
+    credentials: true,
+}
+app.use(cors(corsOptions))
 app.use(express.json())
-const authenticateToken = require('./authMiddleware');
+
+app.get('/test-cors', (req, res) => {
+    res.json({ message: 'CORS test successful' })
+})
+
+const authenticateToken = require('./authMiddleware')
 const MAX_URL_PER_USER = 100
 // Initialize database and start server
 async function initializeApp() {
@@ -94,7 +128,7 @@ app.post('/shortener/new', authenticateToken, async (req, res) => {
         console.error('Error creating short URL:', error)
         res.status(500).json({ error: 'Failed to create short URL' })
     }
-});
+})
 
 
 
@@ -109,7 +143,7 @@ app.get('/shortener/all', authenticateToken, async (req, res) => {
         console.error('Error fetching URLs:', error)
         res.status(500).json({ error: 'Failed to fetch URLs' })
     }
-});
+})
 // Endpoint to archive a URL by ID
 app.patch('/shortener/:id/archive', async (req, res) => {
     try {
@@ -128,7 +162,7 @@ app.patch('/shortener/:id/archive', async (req, res) => {
         console.error('Error archiving URL:', error)
         res.status(500).json({ error: 'Failed to archive URL' })
     }
-});
+})
 
 // Endpoint to update a URL
 app.put('/shortener/:id', authenticateToken, async (req, res) => {
@@ -164,7 +198,7 @@ app.put('/shortener/:id', authenticateToken, async (req, res) => {
         console.error('Error updating URL:', error)
         res.status(500).json({ error: 'Failed to update URL' })
     }
-});
+})
 
 // Endpoint to delete a URL by ID
 app.delete('/shortener/:id', authenticateToken, async (req, res) => {
@@ -185,14 +219,13 @@ app.delete('/shortener/:id', authenticateToken, async (req, res) => {
         console.error('Error deleting URL:', error)
         res.status(500).json({ error: 'Failed to delete URL' })
     }
-});
+})
 
 app.post('/auth/register', async (req, res) => {
     try {
-        // Check if the total number of users has reached 50
         const userCount = await User.count()
         if (userCount >= 50) {
-            return res.status(403).json({ error: 'User registration limit reached. No more users can be registered at this time.' })
+            return res.status(403).json({ error: 'User registration limit reached.' })
         }
 
         const { firstName, lastName, email, password } = req.body
@@ -203,18 +236,57 @@ app.post('/auth/register', async (req, res) => {
             return res.status(400).json({ error: 'Email already in use' })
         }
 
+        // Generate OTP
+        const otp = crypto.randomInt(100000, 999999).toString()
+
+        // Store the OTP temporarily (expires in 10 minutes)
+        otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }
+
+        // Send OTP to the user's email
+        const mailOptions = {
+            from: process.env.SUPPORT_ACCOUNT_EMAIL, // Sender email from .env file
+            to: email,
+            subject: 'Your OTP Code',
+            text: `Your OTP code is: ${otp}. It will expire in 10 minutes.`
+        }
+        await transporter.sendMail(mailOptions)
+
+        return res.status(200).json({ message: 'OTP sent to your email. Please verify to complete registration.' })
+    } catch (error) {
+        console.error('Error sending OTP:', error)
+        return res.status(500).json({ error: 'Failed to send OTP' })
+    }
+})
+
+app.post('/auth/verify-otp', async (req, res) => {
+    try {
+        const { firstName, lastName, email, password, otp } = req.body
+
+        // Check if OTP is valid and not expired
+        if (!otpStore[email] || otpStore[email].otp !== otp) {
+            return res.status(400).json({ error: 'Invalid or expired OTP.' })
+        }
+
+        if (Date.now() > otpStore[email].expiresAt) {
+            delete otpStore[email] // Remove expired OTP
+            return res.status(400).json({ error: 'OTP has expired. Please register again.' })
+        }
+
         // Create new user
         const user = await User.create({ firstName, lastName, email, password })
 
         // Generate JWT token
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-            expiresIn: '1h',
+            expiresIn: '8h',
         })
 
-        res.status(201).json({ token })
+        // Clean up OTP store (remove it after successful registration)
+        delete otpStore[email]
+
+        return res.status(201).json({ token })
     } catch (error) {
-        console.error('Error registering user:', error)
-        res.status(500).json({ error: 'Failed to register user' })
+        console.error('Error verifying OTP:', error)
+        return res.status(500).json({ error: 'Failed to verify OTP' })
     }
 });
 
@@ -240,12 +312,13 @@ app.post('/auth/login', async (req, res) => {
             expiresIn: '1h',
         })
 
-        res.json({ token })
+        // res.json({ token })
+        res.status(200).json({ token })
     } catch (error) {
         console.error('Error logging in user:', error)
         res.status(500).json({ error: 'Failed to log in user' })
     }
-});
+})
 
 app.get('/', (req, res) => {
     res.send('Welcome to the URL Shortener API!')
@@ -271,7 +344,7 @@ app.get('/:shortUrl', async (req, res) => {
         console.error('Error fetching URL:', error)
         res.status(500).json({ error: 'Failed to fetch URL' })
     }
-});
+})
 
 
 // Endpoint to get all URLs (for demonstration purposes)

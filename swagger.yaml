@@ -1,0 +1,400 @@
+openapi: 3.0.0
+info:
+  title: URL Shortener API
+  version: 1.0.0
+  description: API documentation for the URL Shortener service.
+servers:
+  - url: http://localhost:{port}
+    description: Local server
+    variables:
+      port:
+        enum:
+          - "80"
+          - "443"
+          - "3000"
+        default: "80"
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Url:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        originalUrl:
+          type: string
+          example: "https://www.example.com"
+        shortUrl:
+          type: string
+          example: "example"
+        userId:
+          type: integer
+          example: 1
+        archived:
+          type: boolean
+          example: false
+        clicks:
+          type: integer
+          example: 42
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Doe"
+        email:
+          type: string
+          example: "john.doe@example.com"
+        password:
+          type: string
+          format: password
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error message"
+paths:
+  /shortener/new:
+    post:
+      summary: Create a new short URL
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                originalUrl:
+                  type: string
+                  description: The original URL to be shortened
+                proposedShortUrl:
+                  type: string
+                  description: Proposed short URL (optional)
+              required:
+                - originalUrl
+      responses:
+        "201":
+          description: Short URL created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  originalUrl:
+                    type: string
+                  shortUrl:
+                    type: string
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: URL limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /shortener/all:
+    get:
+      summary: Get all URLs for the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: A list of URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Url"
+        "500":
+          description: Failed to fetch URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /shortener/{id}/archive:
+    patch:
+      summary: Archive a URL by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the URL to archive
+      responses:
+        "200":
+          description: URL archived successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  url:
+                    $ref: "#/components/schemas/Url"
+        "404":
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to archive URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /shortener/{id}:
+    put:
+      summary: Update a URL
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the URL to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                originalUrl:
+                  type: string
+                  description: New original URL (optional)
+                shortUrl:
+                  type: string
+                  description: New short URL (optional)
+      responses:
+        "200":
+          description: URL updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Url"
+        "400":
+          description: Bad Request (e.g., Short URL already exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to update URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a URL by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the URL to delete
+      responses:
+        "200":
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "404":
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to delete URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required:
+                - firstName
+                - lastName
+                - email
+                - password
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "400":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User registration limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to register user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      summary: Login an existing user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required:
+                - email
+                - password
+      responses:
+        "200":
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        "400":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to log in user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  "/":
+    get:
+      summary: Welcome message
+      responses:
+        "200":
+          description: Welcome message
+          content:
+            text/plain:
+              schema:
+                type: string
+  "/{shortUrl}":
+    get:
+      summary: Redirect to original URL
+      parameters:
+        - in: path
+          name: shortUrl
+          schema:
+            type: string
+          required: true
+          description: The short URL code
+      responses:
+        "302":
+          description: Redirect to original URL
+        "404":
+          description: Short URL not found or has been archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to fetch URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

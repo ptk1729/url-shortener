@@ -1,0 +1,3 @@
+{   
+    "ignore": ["gehe-fe/*.js", "README"] 
+}
