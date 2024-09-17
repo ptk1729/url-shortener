@@ -33,16 +33,16 @@ const transporter = nodemailer.createTransport({
 })
 // const APP_PORT = process.env.PORT || PORT_PROD || PORT_DEV || 3000;
 
-// const corsOptions = {
-//     origin: 'http://localhost:3000', // Allow requests from this origin
-//     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
-//     allowedHeaders: ['Content-Type', 'Authorization', "Bearer"], // Allowed headers
-//     credentials: true // Allow cookies and authentication headers
-// }
 const corsOptions = {
-    origin: 'http://localhost:3000',
-    credentials: true,
+    origin: ['http://localhost:3000', 'http://localhost', 'https://gehe.fyi'], // Allow requests from this origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+    allowedHeaders: ['Content-Type', 'Authorization', "Bearer"], // Allowed headers
+    credentials: true // Allow cookies and authentication headers
 }
+// const corsOptions = {
+//     origin: 'http://localhost:3000',
+//     credentials: true,
+// }
 app.use(cors(corsOptions))
 app.use(express.json())
 
