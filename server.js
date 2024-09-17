@@ -19,7 +19,7 @@ const app = express()
 
 const PORT_DEV = 80
 // const PORT_PROD = 443
-const APP_PORT = 5001
+const APP_PORT = process.env.PORT
 
 const otpStore = {}
 
