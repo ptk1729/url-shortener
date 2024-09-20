@@ -123,6 +123,8 @@ app.post('/shortener/new', authenticateToken, async (req, res) => {
         res.status(201).json({
             originalUrl: newUrl.originalUrl,
             shortUrl: newUrl.shortUrl,
+            id: newUrl.id,
+
         })
     } catch (error) {
         console.error('Error creating short URL:', error)
@@ -144,6 +146,61 @@ app.get('/shortener/all', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch URLs' })
     }
 })
+
+// Endpoint to fetch all archived URLs for the authenticated user
+app.get('/shortener/archived', authenticateToken, async (req, res) => {
+    try {
+        const archivedUrls = await Url.findAll({
+            where: { archived: true, userId: req.user.id },
+        });
+        res.json(archivedUrls);
+    } catch (error) {
+        console.error('Error fetching archived URLs:', error);
+        res.status(500).json({ error: 'Failed to fetch archived URLs' });
+    }
+});
+
+// Endpoint to delete all archived URLs for the authenticated user
+app.delete('/shortener/archived', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Delete all archived URLs associated with the user
+        const deletedCount = await Url.destroy({
+            where: { archived: true, userId: userId }
+        });
+
+        if (deletedCount === 0) {
+            return res.status(404).json({ message: 'No archived URLs found to delete' });
+        }
+
+        res.status(200).json({ message: `Successfully deleted ${deletedCount} archived URL(s)` });
+    } catch (error) {
+        console.error('Error deleting archived URLs:', error);
+        res.status(500).json({ error: 'Failed to delete archived URLs' });
+    }
+});
+
+app.delete('/shortener/all', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Delete all URLs associated with the user
+        const deletedCount = await Url.destroy({
+            where: { userId: userId }
+        });
+
+        if (deletedCount === 0) {
+            return res.status(404).json({ message: 'No URLs found to delete' });
+        }
+
+        res.status(200).json({ message: `Successfully deleted ${deletedCount} URL(s)` });
+    } catch (error) {
+        console.error('Error deleting all URLs:', error);
+        res.status(500).json({ error: 'Failed to delete all URLs' });
+    }
+});
+
 // Endpoint to archive a URL by ID
 app.patch('/shortener/:id/archive', async (req, res) => {
     try {
@@ -221,6 +278,34 @@ app.delete('/shortener/:id', authenticateToken, async (req, res) => {
     }
 })
 
+// Endpoint to get a URL by ID
+app.get('/shortener/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params
+
+        const url = await Url.findOne({
+            where: { id, userId: req.user.id },
+        })
+        const urlOutOfAllUrls = await Url.findOne({
+            where: { id: id },
+        })
+
+        
+        if (urlOutOfAllUrls && !url) {
+            return res.status(401).json({ error: 'Unauthorized' })
+        }
+        if (!url && !urlOutOfAllUrls) {
+            return res.status(404).json({ error: 'Url does not exist'})
+        }
+
+        res.status(200).json(url)   
+    } catch (error) {
+        console.error('Error fetching URL:', error)
+        res.status(500).json({ error: 'Failed to fetch URL' })
+    }
+})
+
+
 app.post('/auth/register', async (req, res) => {
     try {
         const userCount = await User.count()
@@ -257,6 +342,28 @@ app.post('/auth/register', async (req, res) => {
         return res.status(500).json({ error: 'Failed to send OTP' })
     }
 })
+
+app.delete('/auth/delete-account', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Find the user
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Delete the user
+        await user.destroy();
+
+        res.status(200).json({ message: 'Account deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting account:', error);
+        res.status(500).json({ error: 'Failed to delete account' });
+    }
+});
+
+
 
 app.post('/auth/verify-otp', async (req, res) => {
     try {
