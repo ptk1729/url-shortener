@@ -313,7 +313,7 @@ app.post('/auth/register', async (req, res) => {
             return res.status(403).json({ error: 'User registration limit reached.' })
         }
 
-        const { firstName, lastName, email, password } = req.body
+        const { email } = req.body
 
         // Check if user already exists
         const existingUser = await User.findOne({ where: { email } })
@@ -343,25 +343,6 @@ app.post('/auth/register', async (req, res) => {
     }
 })
 
-app.delete('/auth/delete-account', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.id;
-
-        // Find the user
-        const user = await User.findByPk(userId);
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        // Delete the user
-        await user.destroy();
-
-        res.status(200).json({ message: 'Account deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting account:', error);
-        res.status(500).json({ error: 'Failed to delete account' });
-    }
-});
 
 
 
@@ -411,6 +392,75 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch user details' })
     }
 });
+// Endpoint to update user details
+app.put('/auth/me', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id
+        const { firstName, lastName, email, password } = req.body
+
+        // Find the user by ID
+        const user = await User.findByPk(userId)
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' })
+        }
+
+        // Update user fields if provided
+        if (firstName) user.firstName = firstName
+        if (lastName) user.lastName = lastName
+
+        if (email) {
+            // Check if the new email is already taken by another user
+            const existingUser = await User.findOne({ where: { email } })
+            if (existingUser && existingUser.id !== userId) {
+                return res.status(400).json({ error: 'Email already in use' })
+            }
+            user.email = email
+        }
+        if (password) user.password = password;
+        // if (password) {
+        //     // Hash the new password before saving
+        //     const saltRounds = 10
+        //     const hashedPassword = await bcrypt.hash(password, saltRounds)
+        //     user.password = hashedPassword
+        // }
+
+        // Save the updated user
+        await user.save()
+
+        // Exclude the password from the response
+        const { password: pwd, ...userData } = user.toJSON()
+
+        res.status(200).json({ message: 'User updated successfully', user: userData })
+    } catch (error) {
+        console.error('Error updating user details:', error)
+        res.status(500).json({ error: 'Failed to update user details' })
+    }
+});
+
+app.delete('/auth/me', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id
+        const allUrls = await Url.findAll({ where: { userId: userId } })
+        // console.log(allUrls);
+        if (allUrls.length >= 0) {
+            return res.status(409).json({ error: 'Cannot delete account with existing URLs' })
+        }
+        // Find the user
+        const user = await User.findByPk(userId)
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' })
+        }
+
+        // Delete the user
+        await user.destroy()
+
+        res.status(200).json({ message: 'Account deleted successfully' })
+    } catch (error) {
+        // console.error('Error deleting account:', error);
+        res.status(500).json({ error: 'Failed to delete account' })
+    }
+});
+
 
 // Login an existing user
 app.post('/auth/login', async (req, res) => {
