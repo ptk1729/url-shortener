@@ -17,7 +17,7 @@ const User = require('./models/User') // Ensure the correct path
 
 const app = express()
 
-const PORT_DEV = 80
+// const PORT_DEV = 80
 // const PORT_PROD = 443
 const APP_PORT = process.env.PORT
 
@@ -32,9 +32,12 @@ const transporter = nodemailer.createTransport({
     }
 })
 // const APP_PORT = process.env.PORT || PORT_PROD || PORT_DEV || 3000;
-
+const origins = process.env.CORS_ALLOWLIST.split(",")
+// console.log(origins)
+// CORS opt
 const corsOptions = {
-    origin: ['http://localhost:3000', 'http://localhost', 'https://gehe.fyi'], // Allow requests from this origin
+    // origin: ['http://localhost:3000', 'http://localhost', 'https://gehe.fyi'], // Allow requests from this origin
+    origin: origins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
     allowedHeaders: ['Content-Type', 'Authorization', "Bearer"], // Allowed headers
     credentials: true // Allow cookies and authentication headers
@@ -342,8 +345,6 @@ app.post('/auth/register', async (req, res) => {
         return res.status(500).json({ error: 'Failed to send OTP' })
     }
 })
-
-
 
 
 app.post('/auth/verify-otp', async (req, res) => {
