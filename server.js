@@ -1,7 +1,7 @@
 const express = require("express")
 const axios = require('axios')
 const cheerio = require('cheerio')
-const slugify = require('slugify')
+// const slugify = require('slugify')
 
 require("dotenv").config()
 const cors = require('cors')
