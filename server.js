@@ -129,7 +129,7 @@ function oldGenerateMeaningfulSlug(originalUrl) {
 async function findAvailableShortUrl(proposedShortUrl, originalUrl) {
     let shortUrl = proposedShortUrl
     let counter = 1
-    const baseSlug = ""
+    let baseSlug = ""
     try {
         baseSlug = await generateMeaningfulSlug(originalUrl)
     } catch (error) {
