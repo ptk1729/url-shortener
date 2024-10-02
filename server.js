@@ -1,4 +1,8 @@
 const express = require("express")
+const axios = require('axios')
+const cheerio = require('cheerio')
+const slugify = require('slugify')
+
 require("dotenv").config()
 const cors = require('cors')
 // Import required packages
@@ -70,7 +74,50 @@ async function initializeApp() {
         console.error("Unable to connect to the database:", error)
     }
 }
-function generateMeaningfulSlug(originalUrl) {
+
+
+async function generateMeaningfulSlug(originalUrl) {
+    try {
+        // Fetch the HTML content of the URL
+        const response = await axios.get(originalUrl)
+        const html = response.data
+
+        // Parse the HTML and extract the title
+        const $ = cheerio.load(html)
+        let pageTitle = $('title').text().trim()
+
+        if (pageTitle) {
+            // Slugify the page title
+            let baseSlug = slugify(pageTitle, {
+                lower: true,
+                strict: true,
+            })
+
+            // Optionally, take the first 10 characters
+            return baseSlug.substring(0, 10)
+        } else {
+            // Fallback to using the hostname
+            const parsed = new URL(originalUrl)
+            let baseSlug = slugify(parsed.hostname.replace("www.", ""), {
+                lower: true,
+                strict: true,
+            })
+            return baseSlug
+        }
+    } catch (error) {
+        console.error(`Error fetching the URL: ${error.message}`)
+
+        // Fallback to using the hostname in case of an error
+        const parsed = new URL(originalUrl)
+        let baseSlug = slugify(parsed.hostname.replace("www.", ""), {
+            lower: true,
+            strict: true,
+        })
+        return baseSlug
+    }
+}
+
+function oldGenerateMeaningfulSlug(originalUrl) {
     const parsed = new URL(originalUrl)
     let baseSlug = slugify(parsed.hostname.replace("www.", ""), {
         lower: true,
@@ -82,7 +129,13 @@ function generateMeaningfulSlug(originalUrl) {
 async function findAvailableShortUrl(proposedShortUrl, originalUrl) {
     let shortUrl = proposedShortUrl
     let counter = 1
-    const baseSlug = generateMeaningfulSlug(originalUrl)
+    const baseSlug = ""
+    try {
+        baseSlug = await generateMeaningfulSlug(originalUrl)
+    } catch (error) {
+        baseSlug = oldGenerateMeaningfulSlug(originalUrl)
+    }
+    
 
     while (true) {
         const existingUrl = await Url.findOne({ where: { shortUrl } })
@@ -494,7 +547,10 @@ app.post('/auth/login', async (req, res) => {
 })
 
 app.get('/', (req, res) => {
-    res.send('Welcome to the URL Shortener API!')
+    // res.send(redirect)
+    // reditect to google.com
+    res.redirect('https://gehe.vercel.app/')
+    // res.send('Welcome to the URL Shortener API!')
 })
 // Endpoint to fetch original URL and redirect
 app.get('/:shortUrl', async (req, res) => {
