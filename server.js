@@ -163,12 +163,9 @@ app.post('/shortener/new', authenticateToken, async (req, res) => {
 
         let shortUrl
         if (proposedShortUrl) {
-            shortUrl = await findAvailableShortUrl(proposedShortUrl, originalUrl)
+            shortUrl = await oldGenerateMeaningfulSlug(originalUrl)
         } else {
-            shortUrl = await findAvailableShortUrl(
-                generateMeaningfulSlug(originalUrl),
-                originalUrl
-            )
+            shortUrl = await oldGenerateMeaningfulSlug(originalUrl)
         }
 
         const newUrl = await Url.create({
