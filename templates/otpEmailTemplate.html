@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .email-header {
+        background-color: #39b8a6;
+        color: white;
+        padding: 10px;
+        text-align: center;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+      }
+      .email-body {
+        padding: 20px;
+        text-align: center;
+        color: #333;
+      }
+      .otp-code {
+        font-size: 24px;
+        color: #39b8a6;
+        margin: 10px 0;
+      }
+      .email-footer {
+        margin-top: 20px;
+        color: #777;
+        font-size: 12px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h1>Your OTP Code</h1>
+      </div>
+      <div class="email-body">
+        <p>Hello,</p>
+        <p>Your OTP code is:</p>
+        <p class="otp-code">{{OTP}}</p>
+        <p>This code will expire in 10 minutes.</p>
+      </div>
+      <div class="email-footer">
+        <p>If you didn't request this, please ignore this email.</p>
+      </div>
+    </div>
+  </body>
+</html>

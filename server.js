@@ -2,6 +2,8 @@ const express = require("express")
 const axios = require('axios')
 const cheerio = require('cheerio')
 // const slugify = require('slugify')
+const fs = require('fs');
+const path = require('path');
 
 require("dotenv").config()
 const cors = require('cors')
@@ -26,6 +28,7 @@ const app = express()
 const APP_PORT = process.env.PORT
 
 const otpStore = {}
+const templatePath = path.join(__dirname, 'templates', 'otpEmailTemplate.html');
 
 // Email transport for sending OTPs using environment variables
 const transporter = nodemailer.createTransport({
@@ -116,6 +119,12 @@ async function generateMeaningfulSlug(originalUrl) {
         return baseSlug
     }
 }
+function getOtpEmailContent(otp) {
+    const template = fs.readFileSync(templatePath, {
+        encoding: 'utf-8'
+    });
+    return template.replace('{{OTP}}', otp); // Replace {{OTP}} with actual OTP
+}
 
 function oldGenerateMeaningfulSlug(originalUrl) {
     const parsed = new URL(originalUrl)
@@ -163,7 +172,7 @@ app.post('/shortener/new', authenticateToken, async (req, res) => {
 
         let shortUrl
         if (proposedShortUrl) {
-            shortUrl = await oldGenerateMeaningfulSlug(originalUrl)
+            shortUrl = await findAvailableShortUrl(proposedShortUrl, originalUrl)
         } else {
             shortUrl = await oldGenerateMeaningfulSlug(originalUrl)
         }
@@ -385,7 +394,8 @@ app.post('/auth/register', async (req, res) => {
             from: process.env.SUPPORT_ACCOUNT_EMAIL, // Sender email from .env file
             to: email,
             subject: 'Your OTP Code',
-            text: `Your OTP code is: ${otp}. It will expire in 10 minutes.`
+            html: getOtpEmailContent(otp),
+            // text: `Your OTP code is: ${otp}. It will expire in 10 minutes.`
         }
         await transporter.sendMail(mailOptions)
 
